@@ -1,0 +1,7 @@
+{
+    "name": "Feature Summary by Field",
+    "className": "feature-summary-by-field",
+    "server": "https://demo-west.rallydev.com",
+    "sdk": "2.0",
+    "apiKey": "_PUT_APIKEY_HERE_"
+}
