@@ -3,11 +3,11 @@
 <head>
     <title>Feature Summary by Field</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Wed Nov 25 2015 10:00:39 GMT-0700 (MST) -->
+    <!--  Build Date: Thu Nov 26 2015 07:24:54 GMT-0700 (MST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Nov 25 2015 10:00:39 GMT-0700 (MST)";
-        var CHECKSUM = 6621008700;
+        var APP_BUILD_DATE = "Thu Nov 26 2015 07:24:54 GMT-0700 (MST)";
+        var CHECKSUM = 10841717296;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -187,7 +187,7 @@ Ext.define("feature-summary-by-field", {
     },
 
     modelName: 'PortfolioItem/Feature',
-    fetch: ['FormattedID','Name','State','LeafStoryCount','LeafStoryPlanEstimateTotal','AcceptedLeafStoryCount','AcceptedLeafStoryPlanEstimateTotal','Release','UserStories:summary[Blocked;PlanEstimate]'],
+    fetch: ['FormattedID','Name','State','LeafStoryCount','LeafStoryPlanEstimateTotal','AcceptedLeafStoryCount','AcceptedLeafStoryPlanEstimateTotal','Release'],
     states: [],
     stateField: 'State',
 
@@ -223,12 +223,17 @@ Ext.define("feature-summary-by-field", {
             scope: this
         });
     },
+    getPortfolioItemNameField: function(){
+        return this.modelName.split('/').slice(-1)[0];
+    },
     addSelector: function(){
         this.down('#selector_box').removeAll();
         var groupFieldConfig = this.getGroupingFieldControlConfig();
+        groupFieldConfig.itemId = "group-field",
         groupFieldConfig.fieldLabel = this.model.getField(this.getGroupingField()).displayName;
         groupFieldConfig.labelAlign = 'right';
         groupFieldConfig.margin = '15 15 0 0';
+        groupFieldConfig.width = 300;
 
         this.down('#selector_box').add(groupFieldConfig)
             .on('change', this.updateSummary, this);
@@ -239,7 +244,7 @@ Ext.define("feature-summary-by-field", {
         var fetch = this.fetch.concat([this.getGroupingField]),
             filters = this.getQueryFilter(cb);
 
-        this.logger.log('updateSummary', fetch, filters);
+        this.logger.log('updateSummary', fetch, filters.toString());
 
         var store = Ext.create('Rally.data.wsapi.Store',{
             model: this.modelName,
@@ -256,15 +261,52 @@ Ext.define("feature-summary-by-field", {
     mungeModelData: function(records, operation){
         this.logger.log('mungeModelData', records, operation);
         var summaryMunger = Ext.create('Rally.technicalservices.FeatureSummary',{}),
-            stateData = summaryMunger.getStateSummaryData(this.states, records),
-            issuesData = summaryMunger.getIssuesSummaryData(records);
+            stateData = summaryMunger.getStateSummaryData(this.states, records);
 
-        this.logger.log('mungeModelData data arrays', stateData, issuesData);
+        this.logger.log('mungeModelData stateData', stateData);
 
         this.down('#display_box').removeAll();
         this.addTable(stateData, summaryMunger.getStateColumnCfgs());
-        this.addTable(issuesData, summaryMunger.getIssueColumnCfgs());
 
+        this.fetchUserStories().then({
+            success: function(userStories){
+                summaryMunger.portfolioItemNameField = this.getPortfolioItemNameField();
+                var issuesData = summaryMunger.getIssuesSummaryData(records, userStories);
+                this.logger.log('mungeModelData issuesData', issuesData);
+                this.addTable(issuesData, summaryMunger.getIssueColumnCfgs());
+            },
+            failure: function(msg){
+                Rally.ui.notify.Notifier.showError({message: msg});
+            },
+            scope: this
+        });
+    },
+    fetchUserStories: function(){
+        var deferred = Ext.create('Deft.Deferred'),
+            cmp = this.down('#group-field'),
+            fetch = ['FormattedID','Blocked', 'PlanEstimate'].concat([this.getPortfolioItemNameField()]);
+
+        this.logger.log('fetchUserStories', this.getStoryQueryFilter(cmp).toString());
+
+        var store = Ext.create('Rally.data.wsapi.Store',{
+            model: 'HierarchicalRequirement',
+            filters: this.getStoryQueryFilter(cmp),
+            fetch: fetch,
+            limit: 'Infinity'
+        });
+        store.load({
+            callback: function(records, operation, success){
+                this.logger.log('fetchUserStories',records.length, records, operation, success);
+                if (success){
+                    deferred.resolve(records);
+                } else {
+                    deferred.reject('Error loading user stories for Features: ' + operation.error && operation.error.errors.join(','));
+                }
+            },
+            scope: this
+        });
+
+        return deferred;
     },
     addTable: function(stateData, columnCfgs){
         var grid = Ext.create('Rally.ui.grid.Grid', {
@@ -277,38 +319,91 @@ Ext.define("feature-summary-by-field", {
         });
         this.down('#display_box').add(grid);
     },
+    getStoryQueryFilter: function(cmp){
+        var featurePrefix = this.getPortfolioItemNameField() + ".",
+            filters = Ext.create('Rally.data.wsapi.Filter',{
+                property: 'DirectChildrenCount',
+                value: 0
+            });
+        filters = filters.and({
+            property: this.getPortfolioItemNameField(),
+            operator: '!=',
+            value: ""
+        });
 
-    getQueryFilter: function(cmp){
         if (this.getGroupingField() === 'Release'){
-            this.logger.log('Release Filter', cmp.getRecord().get('name'));
-            if (cmp.getRecord()){
-                return [{
-                    property: 'Release.Name',
-                    value: cmp.getRecord().get('name')
-                }];
+            if (cmp.getValue()){
+                filters = filters.and ({
+                    property: featurePrefix + 'Release.ReleaseStartDate',
+                    value: Rally.util.DateTime.toIsoString(cmp.getRecord().get('ReleaseStartDate'))
+                });
+                filters = filters.and({
+                    property: featurePrefix + 'Release.ReleaseDate',
+                    value: Rally.util.DateTime.toIsoString(cmp.getRecord().get('ReleaseDate'))
+                });
+                return filters.and({
+                    property: featurePrefix + 'Release.Name',
+                    value: cmp.getRecord().get('Name')
+                });
             } else {
-                return [{
-                    property: 'Release',
+                return filters.and({
+                    property: featurePrefix + 'Release',
                     value: ""
-                }];
+                });
             }
         }
+
         if (cmp.getValue){
-            return [{
+            return filters.and({
+                property: featurePrefix + this.getGroupingField(),
+                value: cmp.getValue()
+            });
+        }
+        return filters.and({
+            property: featurePrefix + this.getGroupingField(),
+            value: ''
+        });
+    },
+    getQueryFilter: function(cmp){
+        if (this.getGroupingField() === 'Release'){
+            if (cmp.getValue()){
+                var filters = Ext.create('Rally.data.wsapi.Filter', {
+                    property: 'Release.ReleaseStartDate',
+                    value: Rally.util.DateTime.toIsoString(cmp.getRecord().get('ReleaseStartDate'))
+                });
+                filters = filters.and({
+                    property: 'Release.ReleaseDate',
+                    value: Rally.util.DateTime.toIsoString(cmp.getRecord().get('ReleaseDate'))
+                });
+                return filters.and({
+                    property: 'Release.Name',
+                    value: cmp.getRecord().get('Name')
+                });
+            } else {
+                return Ext.create('Rally.data.wsapi.Filter', {
+                    property: 'Release',
+                    value: ""
+                });
+            }
+        }
+
+        if (cmp.getValue()){
+            this.logger.log('getQueryFilter', this.getGroupingField(), cmp.getValue());
+            return Ext.create('Rally.data.wsapi.Filter', {
                 property: this.getGroupingField(),
                 value: cmp.getValue()
-            }];
+            });
         }
-        return [{
+        return Ext.create('Rally.data.wsapi.Filter', {
             property: this.getGroupingField(),
             value: ''
-        }];
+        });
     },
     getGroupingField: function(){
         return this.getSetting('groupField');
     },
     getGroupingFieldControlConfig: function(){
-        return this.groupingFieldxtypeMapping[this.getGroupingField()] || this.getDefaultGroupingFieldConfig();
+        return this.groupingFieldxtypeMapping[this.getGroupingField().toLowerCase()] || this.getDefaultGroupingFieldConfig();
     },
     getDefaultGroupingFieldConfig: function(){
         return {
@@ -349,6 +444,8 @@ Ext.define("feature-summary-by-field", {
 
 Ext.define('Rally.technicalservices.FeatureSummary',{
 
+    portfolioItemNameField: null,
+
     issues:[{
         type: 'noStories',
         displayName: 'Features Missing Leaf Stories',
@@ -361,21 +458,37 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
     },{
         type: 'unestimatedLeafStories',
         displayName: 'Unestimated Leaf Story Count',
-        countFn: function(record){
-            return 0;
+        countFn: function(record, stories, portfolioItemNameField){
+            var count = 0;
+            _.each(stories, function(s){
+                var planEstimate = s.get('PlanEstimate');
+                planEstimate = planEstimate === null ? -1 : planEstimate;
+                if (s.get(portfolioItemNameField)._ref === record.get('_ref') && planEstimate < 0){
+                    count++;
+                }
+            });
+            return count;
         }
     },{
         type: 'blockedStories',
-        displayName: 'Blocked Stories',
-        countFn: function(record){
-            var userStories = record.get('Summary'),
-                blockedCount = userStories.Blocked['true'] || 0;
-
-            return blockedCount ;
+        displayName: 'Blocked Leaf Stories',
+        countFn: function(record, stories, portfolioItemNameField){
+            var count = 0;
+            _.each(stories, function(s){
+                if (s.get(portfolioItemNameField)._ref === record.get('_ref') && (s.get('Blocked') === true)){
+                    count++;
+                }
+            });
+            return count;
         },
-        pointsFn: function(record){
-
-            return 0;
+        pointsFn: function(record, stories, portfolioItemNameField){
+            var points = 0;
+            _.each(stories, function(s){
+                if (s.get(portfolioItemNameField)._ref === record.get('_ref') && (s.get('Blocked') === true)){
+                    points += s.get('PlanEstimate') || 0;
+                }
+            });
+            return points;
         }
     }],
 
@@ -448,7 +561,7 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
             totalAcceptedCount = 0,
             totalPoints = 0,
             totalAcceptedPoints = 0;
-        console.log('rec', records);
+
         _.each(records, function(r){
 
             var ss = r.get('State').Name;
@@ -498,21 +611,27 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
 
         return data;
     },
-    getIssuesSummaryData: function(records){
-        var data = [];
+    getIssuesSummaryData: function(records, userStories){
+        var data = [],
+            portfolioItemNameField = this.portfolioItemNameField;
+
+        userStories = _.filter(userStories, function(us){
+            if (us.get('Feature')){ return true; }
+        });
 
         _.each(this.issues, function(issue){
             var row = {type: issue.type, issueName: issue.displayName, count: 0, points: 0};
             _.each(records, function(r){
                 if (issue.countFn){
-                    row.count += issue.countFn(r);
+                    row.count += issue.countFn(r, userStories,portfolioItemNameField);
                 }
                 if (issue.pointsFn){
-                    row.points += issue.pointsFn(r);
+                    row.points += issue.pointsFn(r, userStories,portfolioItemNameField);
                 } else {
                     row.points = '--';
                 }
             });
+            row.countPct = (userStories.length > 0 ) ? (row.count/userStories.length * 100).toFixed(1) + ' %' : 'NaN';
             data.push(row);
         });
         return data;

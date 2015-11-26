@@ -117,7 +117,7 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
             totalAcceptedCount = 0,
             totalPoints = 0,
             totalAcceptedPoints = 0;
-        console.log('rec', records);
+
         _.each(records, function(r){
 
             var ss = r.get('State').Name;
@@ -170,7 +170,11 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
     getIssuesSummaryData: function(records, userStories){
         var data = [],
             portfolioItemNameField = this.portfolioItemNameField;
-        console.log('userStoreis', userStories)
+
+        userStories = _.filter(userStories, function(us){
+            if (us.get('Feature')){ return true; }
+        });
+
         _.each(this.issues, function(issue){
             var row = {type: issue.type, issueName: issue.displayName, count: 0, points: 0};
             _.each(records, function(r){

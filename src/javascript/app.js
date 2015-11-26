@@ -66,7 +66,7 @@ Ext.define("feature-summary-by-field", {
         var fetch = this.fetch.concat([this.getGroupingField]),
             filters = this.getQueryFilter(cb);
 
-        this.logger.log('updateSummary', fetch, filters);
+        this.logger.log('updateSummary', fetch, filters.toString());
 
         var store = Ext.create('Rally.data.wsapi.Store',{
             model: this.modelName,
@@ -104,10 +104,11 @@ Ext.define("feature-summary-by-field", {
         });
     },
     fetchUserStories: function(){
-        this.logger.log('fetchUserStories');
         var deferred = Ext.create('Deft.Deferred'),
             cmp = this.down('#group-field'),
             fetch = ['FormattedID','Blocked', 'PlanEstimate'].concat([this.getPortfolioItemNameField()]);
+
+        this.logger.log('fetchUserStories', this.getStoryQueryFilter(cmp).toString());
 
         var store = Ext.create('Rally.data.wsapi.Store',{
             model: 'HierarchicalRequirement',
@@ -141,11 +142,16 @@ Ext.define("feature-summary-by-field", {
         this.down('#display_box').add(grid);
     },
     getStoryQueryFilter: function(cmp){
-        var featurePrefix = "Feature.",
+        var featurePrefix = this.getPortfolioItemNameField() + ".",
             filters = Ext.create('Rally.data.wsapi.Filter',{
                 property: 'DirectChildrenCount',
                 value: 0
             });
+        filters = filters.and({
+            property: this.getPortfolioItemNameField(),
+            operator: '!=',
+            value: ""
+        });
 
         if (this.getGroupingField() === 'Release'){
             if (cmp.getValue()){
@@ -196,23 +202,24 @@ Ext.define("feature-summary-by-field", {
                     value: cmp.getRecord().get('Name')
                 });
             } else {
-                return [{
+                return Ext.create('Rally.data.wsapi.Filter', {
                     property: 'Release',
                     value: ""
-                }];
+                });
             }
         }
 
-        if (cmp.getValue){
-            return [{
+        if (cmp.getValue()){
+            this.logger.log('getQueryFilter', this.getGroupingField(), cmp.getValue());
+            return Ext.create('Rally.data.wsapi.Filter', {
                 property: this.getGroupingField(),
                 value: cmp.getValue()
-            }];
+            });
         }
-        return [{
+        return Ext.create('Rally.data.wsapi.Filter', {
             property: this.getGroupingField(),
             value: ''
-        }];
+        });
     },
     getGroupingField: function(){
         return this.getSetting('groupField');
