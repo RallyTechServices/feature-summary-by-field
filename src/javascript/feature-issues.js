@@ -10,6 +10,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 return 0;
             }
             return 1;
+        },
+        countPctFn: function(features, count){
+            return (features.length > 0 ) ? (count/features.length  * 100).toFixed(1) + ' %' : 'NaN';
         }
     },{
         type: 'unestimatedLeafStories',
@@ -24,6 +27,14 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 }
             });
             return count;
+        },
+        countPctFn: function(features, count){
+            var storyCount = 0;
+            _.each(features, function(f){
+                storyCount += f.get('LeafStoryCount') || 0;
+            });
+
+            return (storyCount > 0 ) ? (count/storyCount  * 100).toFixed(1) + ' %' : 'NaN';
         }
     },{
         type: 'blockedStories',
@@ -45,6 +56,14 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 }
             });
             return points;
+        },
+        countPctFn: function(features, count){
+            var storyCount = 0;
+            _.each(features, function(f){
+                storyCount += f.get('LeafStoryCount') || 0;
+            });
+
+            return (storyCount > 0 ) ? (count/storyCount  * 100).toFixed(1) + ' %' : 'NaN';
         }
     }],
 
@@ -186,8 +205,14 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 } else {
                     row.points = '--';
                 }
+
+
             });
-            row.countPct = (userStories.length > 0 ) ? (row.count/userStories.length * 100).toFixed(1) + ' %' : 'NaN';
+            if (issue.countPctFn){
+                row.countPct = issue.countPctFn(records, row.count);
+            } else {
+                row.countPct = '--';
+            }
             data.push(row);
         });
         return data;

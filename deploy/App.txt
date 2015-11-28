@@ -3,11 +3,11 @@
 <head>
     <title>Feature Summary by Field</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu Nov 26 2015 07:26:31 GMT-0700 (MST) -->
+    <!--  Build Date: Sat Nov 28 2015 16:06:11 GMT-0700 (MST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Nov 26 2015 07:26:31 GMT-0700 (MST)";
-        var CHECKSUM = 10841716097;
+        var APP_BUILD_DATE = "Sat Nov 28 2015 16:06:11 GMT-0700 (MST)";
+        var CHECKSUM = 11545914039;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -454,6 +454,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 return 0;
             }
             return 1;
+        },
+        countPctFn: function(features, count){
+            return (features.length > 0 ) ? (count/features.length  * 100).toFixed(1) + ' %' : 'NaN';
         }
     },{
         type: 'unestimatedLeafStories',
@@ -468,6 +471,14 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 }
             });
             return count;
+        },
+        countPctFn: function(features, count){
+            var storyCount = 0;
+            _.each(features, function(f){
+                storyCount += f.get('LeafStoryCount') || 0;
+            });
+
+            return (storyCount > 0 ) ? (count/storyCount  * 100).toFixed(1) + ' %' : 'NaN';
         }
     },{
         type: 'blockedStories',
@@ -489,6 +500,14 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 }
             });
             return points;
+        },
+        countPctFn: function(features, count){
+            var storyCount = 0;
+            _.each(features, function(f){
+                storyCount += f.get('LeafStoryCount') || 0;
+            });
+
+            return (storyCount > 0 ) ? (count/storyCount  * 100).toFixed(1) + ' %' : 'NaN';
         }
     }],
 
@@ -630,8 +649,14 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 } else {
                     row.points = '--';
                 }
+
+
             });
-            row.countPct = (userStories.length > 0 ) ? (row.count/userStories.length * 100).toFixed(1) + ' %' : 'NaN';
+            if (issue.countPctFn){
+                row.countPct = issue.countPctFn(records, row.count);
+            } else {
+                row.countPct = '--';
+            }
             data.push(row);
         });
         return data;
