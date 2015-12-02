@@ -139,8 +139,8 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
 
         _.each(records, function(r){
 
-            var ss = r.get('State').Name;
-            if (stateSummary[ss]){
+            var ss = r.get('State') && r.get('State').Name;
+            if (ss && stateSummary[ss]){
                 stateSummary[ss].count++;
                 stateSummary[ss].storyCount += r.get('LeafStoryCount') || 0;
                 stateSummary[ss].acceptedStoryCount += r.get('AcceptedLeafStoryCount') || 0;
