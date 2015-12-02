@@ -3,11 +3,11 @@
 <head>
     <title>Feature Summary by Field</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sat Nov 28 2015 16:06:11 GMT-0700 (MST) -->
+    <!--  Build Date: Tue Dec 01 2015 17:35:59 GMT-0700 (MST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sat Nov 28 2015 16:06:11 GMT-0700 (MST)";
-        var CHECKSUM = 11545914039;
+        var APP_BUILD_DATE = "Tue Dec 01 2015 17:35:59 GMT-0700 (MST)";
+        var CHECKSUM = 11570678582;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -583,8 +583,8 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
 
         _.each(records, function(r){
 
-            var ss = r.get('State').Name;
-            if (stateSummary[ss]){
+            var ss = r.get('State') && r.get('State').Name;
+            if (ss && stateSummary[ss]){
                 stateSummary[ss].count++;
                 stateSummary[ss].storyCount += r.get('LeafStoryCount') || 0;
                 stateSummary[ss].acceptedStoryCount += r.get('AcceptedLeafStoryCount') || 0;
