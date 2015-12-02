@@ -1,7 +1,7 @@
 Ext.define('Rally.technicalservices.FeatureSummary',{
 
     portfolioItemNameField: null,
-
+    noEntryText: 'No Entry',
     issues:[{
         type: 'noStories',
         displayName: 'Features Missing Leaf Stories',
@@ -116,8 +116,11 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
         }];
     },
     _initializeSummary: function(types){
-        var summary = {};
+        var summary = {},
+            noEntryText = this.noEntryText;
+
         _.each(types, function(t){
+            t = t || noEntryText;
             summary[t] = {
                 count: 0,
                 storyCount: 0,
@@ -135,11 +138,12 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
             totalStoryCount = 0,
             totalAcceptedCount = 0,
             totalPoints = 0,
-            totalAcceptedPoints = 0;
+            totalAcceptedPoints = 0,
+            noEntryText = this.noEntryText;
 
         _.each(records, function(r){
 
-            var ss = r.get('State') && r.get('State').Name;
+            var ss = (r.get('State') && r.get('State').Name) || noEntryText;
             if (ss && stateSummary[ss]){
                 stateSummary[ss].count++;
                 stateSummary[ss].storyCount += r.get('LeafStoryCount') || 0;
@@ -155,8 +159,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
         });
 
         var data = _.map(states, function(s){
+            s = s || noEntryText;
             return {
-                state: s || "None",
+                state: s,
                 count: stateSummary[s].count || 0,
                 storyCount: stateSummary[s].storyCount || 0,
                 acceptedStoryCount: stateSummary[s].acceptedStoryCount || 0,
@@ -205,8 +210,6 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 } else {
                     row.points = '--';
                 }
-
-
             });
             if (issue.countPctFn){
                 row.countPct = issue.countPctFn(records, row.count);
