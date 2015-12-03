@@ -2,6 +2,7 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
 
     portfolioItemNameField: null,
     noEntryText: 'No Entry',
+    featureAcceptedStates: ['Accepted'],
     issues:[{
         type: 'noStories',
         displayName: 'Features Missing Leaf Stories',
@@ -139,7 +140,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
             totalAcceptedCount = 0,
             totalPoints = 0,
             totalAcceptedPoints = 0,
-            noEntryText = this.noEntryText;
+            noEntryText = this.noEntryText,
+            acceptedFeatureCount = 0,
+            featureAcceptedStates = this.featureAcceptedStates;
 
         _.each(records, function(r){
 
@@ -150,6 +153,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 stateSummary[ss].acceptedStoryCount += r.get('AcceptedLeafStoryCount') || 0;
                 stateSummary[ss].totalPoints += r.get('LeafStoryPlanEstimateTotal') || 0;
                 stateSummary[ss].acceptedPoints += r.get('AcceptedLeafStoryPlanEstimateTotal') || 0;
+            }
+            if (Ext.Array.contains(featureAcceptedStates, ss)){
+                acceptedFeatureCount++;
             }
             totalCount++;
             totalStoryCount += r.get('LeafStoryCount') || 0;
@@ -179,10 +185,11 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
         });
 
         var acceptedCountPct = totalAcceptedCount/totalStoryCount * 100,
-            acceptedPointsPct = totalAcceptedPoints/totalPoints * 100;
+            acceptedPointsPct = totalAcceptedPoints/totalPoints * 100,
+            acceptedFeatureCountPct = acceptedFeatureCount/totalCount * 100;
 
         data.push({state: '% Accepted',
-            count: '',
+            count: !isNaN(acceptedFeatureCountPct) ? acceptedFeatureCountPct.toFixed(1) + " %" : "NaN",
             storyCount: '',
             acceptedStoryCount: !isNaN(acceptedCountPct) ? acceptedCountPct.toFixed(1) + " %" : "NaN",
             totalPoints: '',
