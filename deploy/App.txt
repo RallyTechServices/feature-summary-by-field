@@ -3,11 +3,11 @@
 <head>
     <title>Feature Summary by Field</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Wed Dec 02 2015 11:54:01 GMT-0700 (MST) -->
+    <!--  Build Date: Thu Dec 03 2015 11:09:20 GMT-0600 (CST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Dec 02 2015 11:54:01 GMT-0700 (MST)";
-        var CHECKSUM = 11757738065;
+        var APP_BUILD_DATE = "Thu Dec 03 2015 11:09:20 GMT-0600 (CST)";
+        var CHECKSUM = 12226949655;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -446,6 +446,7 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
 
     portfolioItemNameField: null,
     noEntryText: 'No Entry',
+    featureAcceptedStates: ['Accepted'],
     issues:[{
         type: 'noStories',
         displayName: 'Features Missing Leaf Stories',
@@ -583,7 +584,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
             totalAcceptedCount = 0,
             totalPoints = 0,
             totalAcceptedPoints = 0,
-            noEntryText = this.noEntryText;
+            noEntryText = this.noEntryText,
+            acceptedFeatureCount = 0,
+            featureAcceptedStates = this.featureAcceptedStates;
 
         _.each(records, function(r){
 
@@ -594,6 +597,9 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
                 stateSummary[ss].acceptedStoryCount += r.get('AcceptedLeafStoryCount') || 0;
                 stateSummary[ss].totalPoints += r.get('LeafStoryPlanEstimateTotal') || 0;
                 stateSummary[ss].acceptedPoints += r.get('AcceptedLeafStoryPlanEstimateTotal') || 0;
+            }
+            if (Ext.Array.contains(featureAcceptedStates, ss)){
+                acceptedFeatureCount++;
             }
             totalCount++;
             totalStoryCount += r.get('LeafStoryCount') || 0;
@@ -623,10 +629,11 @@ Ext.define('Rally.technicalservices.FeatureSummary',{
         });
 
         var acceptedCountPct = totalAcceptedCount/totalStoryCount * 100,
-            acceptedPointsPct = totalAcceptedPoints/totalPoints * 100;
+            acceptedPointsPct = totalAcceptedPoints/totalPoints * 100,
+            acceptedFeatureCountPct = acceptedFeatureCount/totalCount * 100;
 
         data.push({state: '% Accepted',
-            count: '',
+            count: !isNaN(acceptedFeatureCountPct) ? acceptedFeatureCountPct.toFixed(1) + " %" : "NaN",
             storyCount: '',
             acceptedStoryCount: !isNaN(acceptedCountPct) ? acceptedCountPct.toFixed(1) + " %" : "NaN",
             totalPoints: '',
